@@ -1,0 +1,58 @@
+##### oh-my-tmux local overrides (safe for macOS + auto layout) #####
+
+# Percentages you can tweak
+set -g @layout_bottom_percent 30
+set -g @layout_top_small_right_percent 25
+
+# Alt navigation (no prefix)
+bind -n M-h select-pane -L
+bind -n M-j select-pane -D
+bind -n M-k select-pane -U
+bind -n M-l select-pane -R
+
+# Alt+Shift resize (no prefix)
+bind -n M-H resize-pane -L 5
+bind -n M-J resize-pane -D 3
+bind -n M-K resize-pane -U 3
+bind -n M-L resize-pane -R 5
+
+# Build three-pane layout in current window (prefix =)
+bind -T prefix = split-window -v -p "#{@layout_bottom_percent}" \; \
+                 select-pane -t 1 \; \
+                 split-window -h -p "#{@layout_top_small_right_percent}" \; \
+                 select-pane -t 1
+
+# New window with the layout (prefix +)
+bind -T prefix + new-window \; \
+                 split-window -v -p "#{@layout_bottom_percent}" \; \
+                 select-pane -t 1 \; \
+                 split-window -h -p "#{@layout_top_small_right_percent}" \; \
+                 select-pane -t 1
+
+# Hooks: auto-apply layout on brand-new session, and on first attach if still 1 window & 1 pane
+set -g @apply_three_pane_layout 'split-window -v -p #{@layout_bottom_percent} \; select-pane -t 1 \; split-window -h -p #{@layout_top_small_right_percent} \; select-pane -t 1'
+
+# 1) Apply immediately at startup/reload IF the session is still 1 window, 1 pane,
+#    and we haven't applied the layout yet (guard flag avoids reapplying on reload).
+if -F "#{&&:#{==:#{session_windows},1},#{==:#{window_panes},1},#{!=:#{@layout_applied},1}}" \
+   "set -g @layout_applied 1 \; #{@apply_three_pane_layout}"
+
+
+set-hook -g session-created "#{@apply_three_pane_layout}" #!important
+set-hook -g client-attached 'if -F "#{&&:#{==:#{session_windows},1},#{==:#{window_panes},1}}" "#{@apply_three_pane_layout}"' #!important
+set-hook -g session-created 'display-message "HOOK: session-created" \; #{@apply_three_pane_layout}'
+set-hook -g client-attached  'display-message "HOOK: client-attached"  \; if -F "#{&&:#{==:#{session_windows},1},#{==:#{window_panes},1}}" "#{@apply_three_pane_layout}"'
+
+# Ensure vi-style keys regardless of $EDITOR
+set -g status-keys vi
+setw -g mode-keys vi
+
+# Speed up Meta handling
+set -sg escape-time 0
+
+# Helpful: show pane numbers at top borders
+setw -g pane-border-status top
+setw -g pane-border-format " #{pane_index} "
+
+# Reload helper
+bind r source-file ~/.config/tmux/tmux.conf \; display-message "tmux reloaded ✔"
